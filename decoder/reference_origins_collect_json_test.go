@@ -932,7 +932,7 @@ func TestCollectReferenceOrigins_json(t *testing.T) {
 				},
 			})
 
-			origins, err := d.CollectReferenceOrigins()
+			refs, err := d.CollectReferences()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -941,7 +941,7 @@ func TestCollectReferenceOrigins_json(t *testing.T) {
 				ctydebug.CmpOptions,
 			}
 
-			if diff := cmp.Diff(tc.expectedOrigins, origins, opts...); diff != "" {
+			if diff := cmp.Diff(tc.expectedOrigins, refs.Origins, opts...); diff != "" {
 				t.Fatalf("mismatched reference origins: %s", diff)
 			}
 		})

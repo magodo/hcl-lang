@@ -16,7 +16,7 @@ import (
 
 func TestCollectReferenceTargets_noSchema(t *testing.T) {
 	d := testPathDecoder(t, &PathContext{})
-	_, err := d.CollectReferenceTargets()
+	_, err := d.CollectReferences()
 	if err == nil {
 		t.Fatal("expected error when no schema is set")
 	}

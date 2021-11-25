@@ -953,12 +953,12 @@ tup = [ var.three ]
 				},
 			})
 
-			origins, err := d.CollectReferenceOrigins()
+			refs, err := d.CollectReferences()
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if diff := cmp.Diff(tc.expectedOrigins, origins, ctydebug.CmpOptions); diff != "" {
+			if diff := cmp.Diff(tc.expectedOrigins, refs.Origins, ctydebug.CmpOptions); diff != "" {
 				t.Fatalf("mismatched reference origins: %s", diff)
 			}
 		})
@@ -1114,12 +1114,12 @@ func TestCollectReferenceOrigins_hcl_path(t *testing.T) {
 				},
 			})
 
-			origins, err := d.CollectReferenceOrigins()
+			refs, err := d.CollectReferences()
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if diff := cmp.Diff(tc.expectedOrigins, origins, ctydebug.CmpOptions); diff != "" {
+			if diff := cmp.Diff(tc.expectedOrigins, refs.Origins, ctydebug.CmpOptions); diff != "" {
 				t.Fatalf("mismatched reference origins: %s", diff)
 			}
 		})

@@ -2548,12 +2548,12 @@ another_block "meh" {
 			if err != nil {
 				t.Fatal(err)
 			}
-			refTargets, err := d.CollectReferenceTargets()
+			refs, err := d.CollectReferences()
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			dirReader.paths[testDir].ReferenceTargets = append(dirReader.paths[testDir].ReferenceTargets, refTargets...)
+			dirReader.paths[testDir].ReferenceTargets = append(dirReader.paths[testDir].ReferenceTargets, refs.Targets...)
 
 			candidates, err := d.CandidatesAtPos("test.tf", tc.pos)
 			if err != nil {

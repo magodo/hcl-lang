@@ -4159,12 +4159,12 @@ func TestCollectReferenceTargets_json(t *testing.T) {
 				},
 			})
 
-			refs, err := d.CollectReferenceTargets()
+			refs, err := d.CollectReferences()
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if diff := cmp.Diff(tc.expectedRefs, refs, ctydebug.CmpOptions); diff != "" {
+			if diff := cmp.Diff(tc.expectedRefs, refs.Targets, ctydebug.CmpOptions); diff != "" {
 				t.Fatalf("mismatch of references: %s", diff)
 			}
 		})

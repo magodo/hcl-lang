@@ -2,7 +2,6 @@ package decoder
 
 import (
 	"context"
-	"sort"
 
 	"github.com/hashicorp/hcl-lang/lang"
 	"github.com/hashicorp/hcl-lang/reference"
@@ -46,33 +45,6 @@ func (d *Decoder) ReferenceOriginsTargetingPos(path lang.Path, file string, pos 
 	}
 
 	return origins
-}
-
-func (d *PathDecoder) CollectReferenceOrigins() (reference.Origins, error) {
-	refOrigins := make(reference.Origins, 0)
-
-	if d.pathCtx.Schema == nil {
-		// unable to collect reference origins without schema
-		return refOrigins, &NoSchemaError{}
-	}
-
-	files := d.filenames()
-	for _, filename := range files {
-		f, err := d.fileByName(filename)
-		if err != nil {
-			// skip unparseable file
-			continue
-		}
-
-		refOrigins = append(refOrigins, d.referenceOriginsInBody(f.Body, d.pathCtx.Schema)...)
-	}
-
-	sort.SliceStable(refOrigins, func(i, j int) bool {
-		return refOrigins[i].OriginRange().Filename <= refOrigins[i].OriginRange().Filename &&
-			refOrigins[i].OriginRange().Start.Byte < refOrigins[j].OriginRange().Start.Byte
-	})
-
-	return refOrigins, nil
 }
 
 func (d *PathDecoder) referenceOriginsInBody(body hcl.Body, bodySchema *schema.BodySchema) reference.Origins {

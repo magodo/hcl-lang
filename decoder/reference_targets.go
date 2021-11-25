@@ -64,26 +64,6 @@ func (d *Decoder) ReferenceTargetsForOriginAtPos(path lang.Path, file string, po
 	return matchingTargets, nil
 }
 
-func (d *PathDecoder) CollectReferenceTargets() (reference.Targets, error) {
-	if d.pathCtx.Schema == nil {
-		// unable to collect reference targets without schema
-		return nil, &NoSchemaError{}
-	}
-
-	refs := make(reference.Targets, 0)
-	files := d.filenames()
-	for _, filename := range files {
-		f, err := d.fileByName(filename)
-		if err != nil {
-			// skip unparseable file
-			continue
-		}
-		refs = append(refs, d.decodeReferenceTargetsForBody(f.Body, nil, d.pathCtx.Schema)...)
-	}
-
-	return refs, nil
-}
-
 func (d *PathDecoder) decodeReferenceTargetsForBody(body hcl.Body, parentBlock *blockContent, bodySchema *schema.BodySchema) reference.Targets {
 	refs := make(reference.Targets, 0)
 
