@@ -47,63 +47,6 @@ func (d *Decoder) ReferenceOriginsTargetingPos(path lang.Path, file string, pos 
 	return origins
 }
 
-func (d *PathDecoder) referenceOriginsInBody(body hcl.Body, bodySchema *schema.BodySchema) reference.Origins {
-	origins := make(reference.Origins, 0)
-
-	if bodySchema == nil {
-		return origins
-	}
-
-	content := decodeBody(body, bodySchema)
-
-	for _, attr := range content.Attributes {
-		aSchema, ok := bodySchema.Attributes[attr.Name]
-		if !ok {
-			if bodySchema.AnyAttribute == nil {
-				// skip unknown attribute
-				continue
-			}
-			aSchema = bodySchema.AnyAttribute
-		}
-
-		if aSchema.OriginForTarget != nil {
-			targetAddr, ok := resolveAttributeAddress(attr, aSchema.OriginForTarget.Address)
-			if ok {
-				origins = append(origins, reference.PathOrigin{
-					Range:      attr.NameRange,
-					TargetAddr: targetAddr,
-					TargetPath: aSchema.OriginForTarget.Path,
-					Constraints: reference.OriginConstraints{
-						{
-							OfScopeId: aSchema.OriginForTarget.Constraints.ScopeId,
-							OfType:    aSchema.OriginForTarget.Constraints.Type,
-						},
-					},
-				})
-			}
-		}
-
-		origins = append(origins, d.findOriginsInExpression(attr.Expr, aSchema.Expr)...)
-	}
-
-	for _, block := range content.Blocks {
-		if block.Body != nil {
-			bSchema, ok := bodySchema.Blocks[block.Type]
-			if !ok {
-				// skip unknown blocks
-				continue
-			}
-			mergedSchema, err := mergeBlockBodySchemas(block.Block, bSchema)
-			if err != nil {
-				continue
-			}
-			origins = append(origins, d.referenceOriginsInBody(block.Body, mergedSchema)...)
-		}
-	}
-
-	return origins
-}
-
 func (d *PathDecoder) findOriginsInExpression(expr hcl.Expression, ec schema.ExprConstraints) reference.Origins {
 	origins := make(reference.Origins, 0)
 
