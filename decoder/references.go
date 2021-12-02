@@ -3,6 +3,7 @@ package decoder
 import (
 	"sort"
 
+	"github.com/hashicorp/hcl-lang/lang"
 	"github.com/hashicorp/hcl-lang/reference"
 	"github.com/hashicorp/hcl-lang/schema"
 	"github.com/hashicorp/hcl/v2"
@@ -14,9 +15,10 @@ func (d *PathDecoder) CollectReferences() (reference.References, error) {
 		return reference.References{}, &NoSchemaError{}
 	}
 
-	refs := reference.References{
+	uRefs := unresolvedReferences{
 		Origins: make(reference.Origins, 0),
 		Targets: make(reference.Targets, 0),
+		Proxies: make(schema.ReferenceProxies, 0),
 	}
 
 	files := d.filenames()
@@ -28,9 +30,12 @@ func (d *PathDecoder) CollectReferences() (reference.References, error) {
 		}
 
 		bodyRefs := d.collectReferencesInBody(f.Body, d.pathCtx.Schema)
-		refs.Origins = append(refs.Origins, bodyRefs.Origins...)
-		refs.Targets = append(refs.Targets, bodyRefs.Targets...)
+		uRefs.Origins = append(uRefs.Origins, bodyRefs.Origins...)
+		uRefs.Proxies = append(uRefs.Proxies, bodyRefs.Proxies...)
+		uRefs.Targets = append(uRefs.Targets, bodyRefs.Targets...)
 	}
+
+	refs := resolveReferenceProxies(uRefs)
 
 	sort.SliceStable(refs.Origins, func(i, j int) bool {
 		return refs.Origins[i].OriginRange().Filename <= refs.Origins[i].OriginRange().Filename &&
@@ -40,14 +45,21 @@ func (d *PathDecoder) CollectReferences() (reference.References, error) {
 	return refs, nil
 }
 
-func (d *PathDecoder) collectReferencesInBody(body hcl.Body, bodySchema *schema.BodySchema) reference.References {
+type unresolvedReferences struct {
+	Origins reference.Origins
+	Targets reference.Targets
+	Proxies schema.ReferenceProxies
+}
+
+func (d *PathDecoder) collectReferencesInBody(body hcl.Body, bodySchema *schema.BodySchema) unresolvedReferences {
 	if bodySchema == nil {
-		return reference.References{}
+		return unresolvedReferences{}
 	}
 
-	refs := reference.References{
+	refs := unresolvedReferences{
 		Origins: make(reference.Origins, 0),
 		Targets: make(reference.Targets, 0),
+		Proxies: make(schema.ReferenceProxies, 0),
 	}
 
 	content := decodeBody(body, bodySchema)
@@ -85,12 +97,54 @@ func (d *PathDecoder) collectReferencesInBody(body hcl.Body, bodySchema *schema.
 			refs.Targets = append(refs.Targets, decodeTargetableBlockContent(block, tb))
 		}
 
+		for _, op := range mergedSchema.ReferenceProxies {
+			refs.Proxies = append(refs.Proxies, op)
+		}
+
 		bodyRefs := d.collectReferencesInBody(block.Body, mergedSchema)
 		refs.Origins = append(refs.Origins, bodyRefs.Origins...)
 		refs.Targets = append(refs.Targets, bodyRefs.Targets...)
 	}
 
 	return refs
+}
+
+func resolveReferenceProxies(refs unresolvedReferences) reference.References {
+	extraOrigins := make(reference.Origins, 0)
+
+	for _, proxy := range refs.Proxies {
+		localOrigins := matchingLocalOrigins(refs.Origins, proxy.LocalAddr)
+		for _, localOrigin := range localOrigins {
+			extraOrigins = append(extraOrigins, reference.PathOrigin{
+				Range:       localOrigin.OriginRange(),
+				TargetAddr:  proxy.TargetAddr,
+				TargetPath:  proxy.TargetPath,
+				Constraints: localOrigin.OriginConstraints(),
+			})
+		}
+	}
+
+	return reference.References{
+		Origins: append(refs.Origins, extraOrigins...),
+		Targets: refs.Targets,
+	}
+}
+
+func matchingLocalOrigins(origins reference.Origins, addr lang.Address) reference.Origins {
+	matchingOrigins := make(reference.Origins, 0)
+
+	for _, origin := range origins {
+		_, ok := origin.(*reference.LocalOrigin)
+		if !ok {
+			continue
+		}
+
+		if origin.Address().Equals(addr) {
+			matchingOrigins = append(matchingOrigins, origin)
+		}
+	}
+
+	return matchingOrigins
 }
 
 func (d *PathDecoder) collectOriginsInAttribute(attr *hcl.Attribute, aSchema *schema.AttributeSchema) reference.Origins {

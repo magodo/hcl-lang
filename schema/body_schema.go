@@ -31,6 +31,8 @@ type BodySchema struct {
 	// TargetableAs represents how else the body may be targeted
 	// if not by its declarable attributes or blocks.
 	TargetableAs Targetables
+
+	ReferenceProxies ReferenceProxies
 }
 
 type DocsLink struct {
